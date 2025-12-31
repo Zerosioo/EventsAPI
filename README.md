@@ -90,11 +90,12 @@ public class ProductCancelEvent extends BaseEvent implements Cancellable {
 new ProductOrderEvent(product, user).fire();
 
 ProductCancelEvent event = new ProductCancelEvent(product, user);
-event.fire();
 
 if (event.isCancelled()) {
     return;
 }
+
+event.fire();
 
 ```
 
