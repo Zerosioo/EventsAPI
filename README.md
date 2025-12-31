@@ -13,19 +13,12 @@ Designed similarly to Bukkit/Spigot events, with a simple API and zero dependenc
 - No external libraries
 
 ## Installation
-Add this inside your repositories
-```xml
-<repository>
-    <id>github</id>
-    <url>https://maven.pkg.github.com/Zerosioo/EventsAPI</url>
-</repository>
-```
-And add this inside your dependencies
+Add this inside your dependencies
 ```xml
 <dependency>
-    <groupId>com.zerosio.events</groupId>
-    <artifactId>EventsAPI</artifactId>
-    <version>1.0.0</version>
+  <groupId>io.github.zerosioo</groupId>
+  <artifactId>eventsapi</artifactId>
+  <version>1.0.0</version>
 </dependency>
 ```
 
