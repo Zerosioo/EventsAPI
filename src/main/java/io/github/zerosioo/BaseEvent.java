@@ -3,13 +3,13 @@ package io.github.zerosioo;
 public abstract class BaseEvent {
 
     private final String name;
-    private final boolean async;
+    private boolean async;
 
-    public BaseEvent() {
+    protected BaseEvent() {
         this(false);
     }
 
-    public BaseEvent(boolean async) {
+    protected BaseEvent(boolean async) {
         this.name = getClass().getSimpleName();
         this.async = async;
     }
@@ -20,6 +20,10 @@ public abstract class BaseEvent {
 
     public boolean isAsynchronous() {
         return async;
+    }
+
+    protected void setAsync(boolean async) {
+        this.async = async;
     }
 
     public final void fire() {

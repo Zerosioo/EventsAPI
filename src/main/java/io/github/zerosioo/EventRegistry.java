@@ -2,77 +2,87 @@ package io.github.zerosioo;
 
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 public class EventRegistry {
 
-    private static EventRegistry instance;
+	private static final EventRegistry instance = new EventRegistry();
 
-    private final Map<Class<? extends BaseEvent>, List<EventSubscription>> subscriptions =
-            new ConcurrentHashMap<>();
+	private final Map<Class<? extends BaseEvent>, List<EventSubscription>> subscriptions = new ConcurrentHashMap<>();
+	private final ExecutorService asyncExecutor =
+		Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    private EventRegistry() {}
+	private EventRegistry() {}
 
-    public static EventRegistry getInstance() {
-        if (instance == null) {
-            instance = new EventRegistry();
-        }
-        return instance;
-    }
+	public static EventRegistry getInstance() {
+		return instance;
+	}
 
-    public void register(EventListener listener) {
-        for (Method method : listener.getClass().getDeclaredMethods()) {
+	public void register(EventListener listener) {
+		for (Method method : listener.getClass().getDeclaredMethods()) {
 
-            EventSubscriber sub = method.getAnnotation(EventSubscriber.class);
-            if (sub == null) continue;
+			EventSubscriber sub = method.getAnnotation(EventSubscriber.class);
+			if (sub == null) continue;
 
-            Class<?>[] params = method.getParameterTypes();
-            if (params.length != 1 || !BaseEvent.class.isAssignableFrom(params[0])) {
-                throw new IllegalArgumentException(
-                        "Method " + method.getName() +
-                        " must have exactly one BaseEvent parameter"
-                );
-            }
+			Class<?>[] params = method.getParameterTypes();
+			if (params.length != 1 || !BaseEvent.class.isAssignableFrom(params[0])) {
+				throw new IllegalArgumentException("Method " + method.getName() + " must have exactly one BaseEvent parameter"
+												  );
+			}
 
-            @SuppressWarnings("unchecked")
-            Class<? extends BaseEvent> eventClass =
-                    (Class<? extends BaseEvent>) params[0];
+			method.setAccessible(true);
 
-            EventSubscription subscription = new EventSubscription(
-                    listener,
-                    method,
-                    sub.priority(),
-                    sub.ignoreCancelled()
-            );
+			@SuppressWarnings("unchecked")
+			Class<? extends BaseEvent> eventClass =
+				(Class<? extends BaseEvent>) params[0];
 
-            subscriptions
-                .computeIfAbsent(eventClass, k -> new ArrayList<>())
-                .add(subscription);
+			EventSubscription subscription = new EventSubscription(
+				listener,
+				method,
+				sub.priority(),
+				sub.ignoreCancelled()
+			);
 
-            subscriptions.get(eventClass)
-                .sort(Comparator.comparingInt(s -> s.getPriority().getSlot()));
-        }
-    }
+			subscriptions.computeIfAbsent(eventClass, k -> new CopyOnWriteArrayList<>()).add(subscription);
 
-    public void unregister(EventListener listener) {
-        subscriptions.values()
-                .forEach(list -> list.removeIf(s -> s.getListener() == listener));
-    }
+			subscriptions.get(eventClass).sort(Comparator.comparingInt(s -> s.getPriority().getSlot()));
+		}
+	}
 
-    void fireEvent(BaseEvent event) {
-        List<EventSubscription> list = subscriptions.get(event.getClass());
-        if (list == null) return;
+	public void unregister(EventListener listener) {
+		subscriptions.values()
+		.forEach(list -> list.removeIf(s -> s.getListener() == listener));
+	}
 
-        for (EventSubscription sub : list) {
-            try {
-                sub.execute(event);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+	void fireEvent(BaseEvent event) {
+		List<EventSubscription> list = subscriptions.get(event.getClass());
+		if (list == null || list.isEmpty()) return;
 
-    public List<EventSubscription> getSubscriptions(Class<? extends BaseEvent> eventClass) {
-        return subscriptions.getOrDefault(eventClass, Collections.emptyList());
-    }
+		Runnable task = () -> {
+			for (EventSubscription sub : list) {
+				try {
+					sub.execute(event);
+				} catch (Throwable t) {
+					System.err.println(
+						"[Events] Error in " + event.getEventName()
+					);
+					t.printStackTrace();
+				}
+			}
+		};
+
+		if (event.isAsynchronous()) {
+			asyncExecutor.execute(task);
+		} else {
+			task.run();
+		}
+	}
+
+	public List<EventSubscription> getSubscriptions(Class<? extends BaseEvent> eventClass) {
+		return subscriptions.getOrDefault(eventClass, Collections.emptyList());
+	}
+
+	public void shutdown() {
+		asyncExecutor.shutdown();
+	}
 }
