@@ -18,7 +18,7 @@ Add this inside your dependencies
 <dependency>
   <groupId>io.github.zerosioo</groupId>
   <artifactId>eventsapi</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 ```
 
