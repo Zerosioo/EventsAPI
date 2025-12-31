@@ -1,4 +1,4 @@
-package com.zerosio.events;
+package io.github.zerosioo;
 
 import java.lang.annotation.*;
 

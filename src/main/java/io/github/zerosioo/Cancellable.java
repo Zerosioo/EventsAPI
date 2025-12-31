@@ -1,4 +1,4 @@
-package com.zerosio.events;
+package io.github.zerosioo;
 
 public interface Cancellable {
     boolean isCancelled();
