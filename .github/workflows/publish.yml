@@ -28,6 +28,8 @@ jobs:
         run: mvn org.codehaus.mojo:versions-maven-plugin:set -DnewVersion=${VERSION} -DgenerateBackupPoms=false
 
       - name: Configure Maven settings
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
         run: |
           mkdir -p ~/.m2
           cat <<EOF > ~/.m2/settings.xml
@@ -44,5 +46,3 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: mvn deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
